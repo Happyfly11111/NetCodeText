@@ -27,6 +27,8 @@ public class GameManager : MonoBehaviour
         NetworkManager.Singleton.OnServerStarted += () => {
              Debug.Log("Server started"); 
         };
+
+        
     }
 
     // Update is called once per frame
