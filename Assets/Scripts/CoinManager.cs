@@ -18,16 +18,16 @@ public class CoinManager : NetworkBehaviour
         this.gameObject.SetActive(networkIsActive.Value);
     }
 
-    public void SetActive(bool active)
+    public void SetActive(bool active)//给外部的函数
     {
         if (this.IsServer)
         {
-            networkIsActive.Value = active;
+            networkIsActive.Value = active;// 服务器可以直接修改网络变量
 
         }
         else if (this.IsClient)
         {
-            SetNetworkActiveServerRpc(active);
+            SetNetworkActiveServerRpc(active);// 客户端通过RPC请求修改网络变量
         }
     }
 

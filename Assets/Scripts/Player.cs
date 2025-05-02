@@ -126,7 +126,7 @@ public class Player : NetworkBehaviour
         rg.MoveRotation(rot.normalized);
     }
 
-    private void OnTriggerEnter(Collider other)
+    private void OnTriggerEnter(Collider other)//!碰撞和Update都要判断是服务器端还是客户端
     {
 
         if (other.CompareTag("Coin"))
