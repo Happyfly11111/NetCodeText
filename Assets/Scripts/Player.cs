@@ -73,11 +73,11 @@ public class Player : NetworkBehaviour
             Quaternion rot = GetTargetRot(h);
 
 
-            UpdatePosAndRotServerRpc(pos, rot);
+            UpdatePosAndRotServerRpc(pos, rot);//!上传服务器数据
 
-            // 移动到目标位置
+            //! 本地移动到目标位置
             Move(pos);
-            // 旋转到目标旋转
+            //! 本地旋转到目标旋转
             Rotate(rot);
         }
         else//控制其他玩家的移动同步
@@ -94,7 +94,7 @@ public class Player : NetworkBehaviour
     {
         //设置网络变量的值 //*告诉服务器端 该变量的变化情况 便于后面将变化同步到其他客户端
         networkPos.Value = pos;
-        networkRot.Value = rot;
+        networkRot.Value = rot.normalized;
     }
 
     private Vector3 GetTargetPos(float v)
@@ -115,7 +115,7 @@ public class Player : NetworkBehaviour
     private Quaternion GetTargetRot(float h)
     {
         // 计算旋转增量
-        Quaternion deltaRotation = Quaternion.Euler(0f, h * rotationSpeed * Time.deltaTime, 0f);
+        Quaternion deltaRotation = Quaternion.Euler(0f, h * rotationSpeed * Time.deltaTime, 0f).normalized;
         // 计算目标旋转
         return rg.rotation * deltaRotation;
     }
@@ -123,6 +123,21 @@ public class Player : NetworkBehaviour
     private void Rotate(Quaternion rot)
     {
         // 旋转刚体到目标旋转
-        rg.MoveRotation(rot);
+        rg.MoveRotation(rot.normalized);
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+
+        if (other.CompareTag("Coin"))
+        {
+            //! 只有是该客户端的玩家才会触发该事件
+            if (this.IsOwner)
+            {
+                //other.gameObject.SetActive(false);//!只修改了本地的可见性 并没有修改服务器端的可见性
+
+                other.gameObject.GetComponent<CoinManager>().SetActive(false);//调用CoinManager脚本中的SetActive方法 该方法会将网络变量的值同步到其他客户端
+            }
+        }
     }
 }
