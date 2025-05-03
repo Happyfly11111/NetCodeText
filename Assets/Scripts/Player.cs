@@ -15,7 +15,8 @@ public class Player : NetworkBehaviour
     [SerializeField]
     private Text nameText; // 玩家名称文本
 
-    // 定义网络变量 //*告诉服务器端 该变量的变化情况 并将变化同步到其他客户端
+
+    // 定义网络变量 //*会通知 所有 客户端
     private NetworkVariable<Vector3> networkPos = new NetworkVariable<Vector3>();
 
     private NetworkVariable<Quaternion> networkRot = new NetworkVariable<Quaternion>();
@@ -89,10 +90,10 @@ public class Player : NetworkBehaviour
         }
     }
 
-    [ServerRpc]   //!得加这个  
-    public void UpdatePosAndRotServerRpc(Vector3 pos, Quaternion rot)//*告诉服务器端 该方法的调用情况 并将调用同步到其他客户端
+    [ServerRpc]   //*上传数据给服务器端 服务器端执行下面操作
+    public void UpdatePosAndRotServerRpc(Vector3 pos, Quaternion rot)
     {
-        //设置网络变量的值 //*告诉服务器端 该变量的变化情况 便于后面将变化同步到其他客户端
+        //设置网络变量的值 
         networkPos.Value = pos;
         networkRot.Value = rot.normalized;
     }
@@ -109,25 +110,25 @@ public class Player : NetworkBehaviour
     private void Move(Vector3 pos)
     {
         // 移动刚体到目标位置
-        rg.MovePosition(pos);
+        rg.MovePosition(Vector3.Lerp(rg.position, pos, Time.deltaTime * 10));
     }
 
     private Quaternion GetTargetRot(float h)
     {
+        
         // 计算旋转增量
-        Quaternion deltaRotation = Quaternion.Euler(0f, h * rotationSpeed * Time.deltaTime, 0f).normalized;
+        Quaternion deltaRotation = Quaternion.Euler(0f, h * rotationSpeed * Time.deltaTime, 0f);
         // 计算目标旋转
         return rg.rotation * deltaRotation;
     }
 
     private void Rotate(Quaternion rot)
     {
-        // 旋转刚体到目标旋转
-        rg.MoveRotation(rot.normalized);
+            rg.MoveRotation(Quaternion.Lerp(rg.rotation, rot, Time.deltaTime * 10));
     }
 
     private void OnTriggerEnter(Collider other)//!碰撞和Update都要判断是服务器端还是客户端
-    {
+    {s
 
         if (other.CompareTag("Coin"))
         {
@@ -138,6 +139,36 @@ public class Player : NetworkBehaviour
 
                 other.gameObject.GetComponent<CoinManager>().SetActive(false);//调用CoinManager脚本中的SetActive方法 该方法会将网络变量的值同步到其他客户端
             }
+        }
+        else if (other.CompareTag("Player"))
+        {
+            ulong clientId = other.gameObject.GetComponent<NetworkObject>().OwnerClientId;//*NetworkObject类中也有OwnerClientId属性
+            UpdatePlayerMeetServerRpc(this.OwnerClientId, clientId);//上传数据给服务器端 服务器端会将数据同步到其他客户端
+            Debug.Log($"玩家相遇事件1：来自 {this.OwnerClientId} -> 目标 {clientId}");
+        }
+    }
+    [ServerRpc(RequireOwnership = false)] //*上传数据给服务器端 服务器端执行下面操作
+    public void UpdatePlayerMeetServerRpc(ulong from, ulong to)
+    {
+        //* 需要 指定 的客户端的信息
+        ClientRpcParams clientRpcParams = new ClientRpcParams
+        {
+            Send = new ClientRpcSendParams
+            {
+                TargetClientIds = new ulong[] { to }
+            }
+        };
+
+        NotifyPlayerMeetClientRpc(from, clientRpcParams);//*分发指定的客户端
+        Debug.Log($"玩家相遇事件2：来自 {from} -> 目标 {to}");
+    }
+
+    [ClientRpc] //*通知指定的客户端
+    public void NotifyPlayerMeetClientRpc(ulong from, ClientRpcParams clientRpcParams = default)
+    {
+        if (!this.IsOwner)//判断当前实例是否运行在客户端上
+        {
+            Debug.Log($"玩家相遇事件3：来自 {from} -> 目标 {this.OwnerClientId}");
         }
     }
 }

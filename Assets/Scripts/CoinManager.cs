@@ -9,7 +9,7 @@ public class CoinManager : NetworkBehaviour
 
     public override void OnNetworkSpawn()
     {
-        
+        //:服务器->客户端
         networkIsActive.OnValueChanged += (previousValue, newValue) =>
         {
             this.gameObject.SetActive(newValue);
@@ -25,11 +25,13 @@ public class CoinManager : NetworkBehaviour
             networkIsActive.Value = active;// 服务器可以直接修改网络变量
 
         }
-        else if (this.IsClient)
+        else if (this.IsClient) 
         {
+            //:客户端->服务器
             SetNetworkActiveServerRpc(active);// 客户端通过RPC请求修改网络变量
         }
     }
+
 
     [ServerRpc (RequireOwnership = false)]//*允许非拥有者(创建者)调用该函数
     //!此时Coin的拥有者(创建者)是服务器端
