@@ -19,7 +19,10 @@ public class GameManager : NetworkBehaviour
         NetworkManager.Singleton.OnClientConnectedCallback += (id) =>
         {
             Debug.Log("A new Client connected, id: " + id);//相当于Player的OwerClientId
-            //CreatePlayer();//!在客户端连接时创建玩家 该函数会在所有客户端上调用 从而实现同步
+            if (IsServer) // 只在服务器端创建玩家
+            {
+                CreatePlayerServerRpc(id); // 通过RPC调用创建玩家
+            }
 
         };//*客户端连接回调
         NetworkManager.Singleton.OnClientDisconnectCallback += (id) =>
@@ -29,22 +32,20 @@ public class GameManager : NetworkBehaviour
         NetworkManager.Singleton.OnServerStarted += () =>
         {
             Debug.Log("Server started");
-            CreateCoins();//!应该是服务器端创建金币
+            if (IsServer)
+            {
+                CreateCoins();
+            }
         };//*服务器端启动回调
     }
 
-    // Update is called once per frame
-    void Update()
+    [ServerRpc(RequireOwnership = false)]
+    private void CreatePlayerServerRpc(ulong clientId)
     {
-
-    }
-
-    private void CreatePlayer()
-    {
-        Vector3 spawnPos = GetValidSpawnPosition(0.5f);
-        GameObject gameObject = Instantiate(playerPrefab, spawnPos, Quaternion.identity);
-        gameObject.GetComponent<NetworkObject>().Spawn();//!在网络上实例化玩家 该函数会在所有客户端上调用 从而实现同步
-        gameObject.GetComponent<NetworkObject>().ChangeOwnership(NetworkManager.Singleton.LocalClientId);//!将玩家的拥有权转移到当前客户端上
+        Vector3 spawnPos = new Vector3(-69, 6, -31);
+        GameObject player = Instantiate(playerPrefab, spawnPos, Quaternion.identity);
+        NetworkObject networkObject = player.GetComponent<NetworkObject>();
+        networkObject.SpawnWithOwnership(clientId); // 直接生成并赋予所有权
     }
 
     private void CreateCoins()
@@ -54,6 +55,7 @@ public class GameManager : NetworkBehaviour
             Vector3 spawnPos = GetValidSpawnPosition(0.02f);
             GameObject ob = Instantiate(coinPrefab, spawnPos, Quaternion.identity);//只在本地实例化金币
             ob.GetComponent<NetworkObject>().Spawn();//!在网络上实例化金币 该函数会在所有客户端上调用 从而实现同步
+            ob.GetComponent<NetworkObject>().ChangeOwnership(NetworkManager.ServerClientId);//!将金币的拥有权转移到当前服务器端上 //默认的
         }
     }
 
